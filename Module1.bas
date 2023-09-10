@@ -3,7 +3,7 @@ Option Explicit
 Dim sEnginePath As String, sPDF
 Const APPNAME = "Change Bluebeam Revu Markups"
 
-'Choose  PDF
+'Choose PDF
 Sub Btn3_Click()
     Dim sTmp As String
     On Error Resume Next
@@ -12,7 +12,7 @@ Sub Btn3_Click()
         sTmp = Environ("OneDrive") & Mid(ActiveWorkbook.Path, Application.Find("@", Application.Substitute(ActiveWorkbook.Path, "/", "@", 4)), 999)
     End If
     ChDir sTmp
-    sPDF = Application.GetOpenFilename("PDF�ļ�,*.pdf")
+    sPDF = Application.GetOpenFilename("PDF File,*.pdf")
     If VarType(sPDF) = 11 Then
         MsgBox "Please select the PDF file.", vbOKOnly, APPNAME
         sPDF = ""
@@ -165,7 +165,7 @@ Sub Btn1_Click()
             End If
         End If
     Next I
-    sMsg = sMsg + " Paired*" + Trim(iEnd) + "��;"
+    sMsg = sMsg + " Paired*" + Trim(iEnd) + ";"
     Range("C2").Value = sMsg
     
     For I = 1 To UBound(aSubjectSort)
@@ -188,7 +188,7 @@ Sub Btn1_Click()
         Set oExec = oShell.Exec(sEnginePath + sCMD)
         MsgBox "PDF saved as: " + vbCrLf + sNewFile, vbOKCancel, APPNAME
     Else
-        MsgBox "No paired markup��Please add the pair list in Col A&B.", vbOKCancel, APPNAME
+        MsgBox "No paired markup, Please add the pair list in Col A&B.", vbOKCancel, APPNAME
     End If
     
     
