@@ -7,8 +7,14 @@ Const APPNAME = "Change Bluebeam Revu Markups"
 Sub Btn3_Click()
     Dim sTmp As String
     On Error Resume Next
-    sTmp = ThisWorkbook.Path
-    If InStr(1, sTmp, "http") >= 0 Then
+    If Range("A3").Value = "" Then
+        sTmp = ThisWorkbook.Path
+    Else
+        sTmp = Range("A3").Value
+        sTmp = Mid(sTmp, 1, InStrRev(sTmp, "\") - 1)
+    End If
+    
+    If InStr(1, sTmp, "http") > 0 Then
         sTmp = Environ("OneDrive") & Mid(ActiveWorkbook.Path, Application.Find("@", Application.Substitute(ActiveWorkbook.Path, "/", "@", 4)), 999)
     End If
     ChDir sTmp
@@ -16,8 +22,9 @@ Sub Btn3_Click()
     If VarType(sPDF) = 11 Then
         MsgBox "Please select the PDF file.", vbOKOnly, APPNAME
         sPDF = ""
+    Else
+        Range("A3").Value = sPDF
     End If
-    Range("A3").Value = sPDF
 End Sub
 
 'Find ScriptEngine.exe
@@ -67,15 +74,19 @@ Sub Btn1_Click()
     sNewFile = Mid(sPDF, 1, InStr(1, sPDF, ".pdf") - 1)
     sNewFile = sNewFile & "_" & DatePart("yyyy", Date) & DatePart("M", Date) & DatePart("D", Date) & ".pdf"
     
+    Range("C2").Value = "Reading Markup ID list..."
     Set oShell = CreateObject("WScript.Shell")
     Set oExec = oShell.Exec(sEnginePath + " Open('" + sPDF + "') MarkupList(1) Close()")
+    Sleep (0.5)
     sResult = oExec.StdOut.ReadAll
     aID = Split(sResult, vbCrLf)
     sMsg = "Found: ID*" + Trim(UBound(aID)) + ";"
+    Range("C2").Value = sMsg
     
     iCount = 0
     sResult = ""
     sCMD = ""
+    Range("C2").Value = "Reading Markup subjects..."
     For I = 1 To UBound(aID)
         If aID(I) <> "" Then
             sCMD = sCMD + "MarkupGetEx(1, '" + aID(I) + "','subject') "
@@ -83,7 +94,9 @@ Sub Btn1_Click()
             iCount = iCount + 1
             If iCount = CountMax Then 'seperate the CMD in case of too long
                 sCMD = " Open('" + sPDF + "') " + sCMD + "Close()"
+                Range("C2").Value = "Reading Markup subjects to ID:" & Trim(I) & "..."
                 Set oExec = oShell.Exec(sEnginePath + sCMD)
+                Sleep (0.5)
                 sResult = sResult + oExec.StdOut.ReadAll
                 iCount = 0
                 sCMD = ""
@@ -93,7 +106,9 @@ Sub Btn1_Click()
     
     If iCount > 0 Then
         sCMD = " Open('" + sPDF + "') " + sCMD + "Close()"
+        Range("C2").Value = "Reading Markup subjects to ID:" & Trim(I) & "..."
         Set oExec = oShell.Exec(sEnginePath + sCMD)
+        Sleep (0.5)
         sResult = sResult + oExec.StdOut.ReadAll
         iCount = 0
     End If
@@ -123,11 +138,13 @@ Sub Btn1_Click()
         End Select
     Next I
     sMsg = sMsg + " Markup*" + Trim(UBound(aSubject)) + ";"
+    Range("C2").Value = sMsg
     
     iTmp = 0
     iEnd = 0
     iCount = 0
     sCMD = ""
+    Range("C2").Value = "Changing Markup subjects..."
     For I = 1 To UBound(aSubject)
         If iTmp = 0 Then
             iTmp = iTmp + 1
@@ -158,8 +175,10 @@ Sub Btn1_Click()
                 Else
                     sCMD = " Open('" + sPDF + "') " + sCMD + "Save('" + sNewFile + "',1) Close()"
                 End If
+                Range("C2").Value = "Changing Markup subjects to ID:" & Trim(I) & "..."
                 Set oExec = oShell.Exec(sEnginePath + sCMD)
-                Sleep (2)
+                Sleep (0.5)
+                sResult = oExec.StdOut.ReadAll
                 iCount = 0
                 sCMD = ""
             End If
@@ -186,6 +205,8 @@ Sub Btn1_Click()
     
     If iEnd > 0 Then
         Set oExec = oShell.Exec(sEnginePath + sCMD)
+        Sleep (0.5)
+        sResult = oExec.StdOut.ReadAll
         MsgBox "PDF saved as: " + vbCrLf + sNewFile, vbOKCancel, APPNAME
     Else
         MsgBox "No paired markup, Please add the pair list in Col A&B.", vbOKCancel, APPNAME
