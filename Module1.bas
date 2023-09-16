@@ -43,7 +43,7 @@ End Sub
 Sub Btn1_Click()
     Dim oShell As Object, oExec As Object, oOutput As Object, sResult
     Dim aID() As String, aR() As String, ScriptEngine As String, sCMD As String
-    Dim I As Integer, aSubject() As String, aSubjectID() As String, iTmp As Integer, iID As Integer
+    Dim i As Integer, aSubject() As String, aSubjectID() As String, iTmp As Integer, iID As Integer
     Dim iStart As Integer, iEnd As Integer, aSubjectSort() As String, sTmp As String
     Dim sMsg As String, sNewFile As String, iCount As Integer
     Const CountMax = 100
@@ -80,6 +80,11 @@ Sub Btn1_Click()
     Sleep (0.5)
     sResult = oExec.StdOut.ReadAll
     aID = Split(sResult, vbCrLf)
+    
+    If IsEmpty(aID) Then
+        MsgBox "Can't find any Markup ID in this file.", vbOKOnly, APPNAME
+        Exit Sub
+    End If
     sMsg = "Found: ID*" + Trim(UBound(aID)) + ";"
     Range("C2").Value = sMsg
     
@@ -87,14 +92,14 @@ Sub Btn1_Click()
     sResult = ""
     sCMD = ""
     Range("C2").Value = "Reading Markup subjects..."
-    For I = 1 To UBound(aID)
-        If aID(I) <> "" Then
-            sCMD = sCMD + "MarkupGetEx(1, '" + aID(I) + "','subject') "
+    For i = 1 To UBound(aID)
+        If aID(i) <> "" Then
+            sCMD = sCMD + "MarkupGetEx(1, '" + aID(i) + "','subject') "
             
             iCount = iCount + 1
             If iCount = CountMax Then 'seperate the CMD in case of too long
                 sCMD = " Open('" + sPDF + "') " + sCMD + "Close()"
-                Range("C2").Value = "Reading Markup subjects to ID:" & Trim(I) & "..."
+                Range("C2").Value = "Reading Markup subjects to ID:" & Trim(i) & "/" & Trim(UBound(aID)) & "..."
                 Set oExec = oShell.Exec(sEnginePath + sCMD)
                 Sleep (0.5)
                 sResult = sResult + oExec.StdOut.ReadAll
@@ -102,11 +107,11 @@ Sub Btn1_Click()
                 sCMD = ""
             End If
         End If
-    Next I
+    Next i
     
     If iCount > 0 Then
         sCMD = " Open('" + sPDF + "') " + sCMD + "Close()"
-        Range("C2").Value = "Reading Markup subjects to ID:" & Trim(I) & "..."
+        Range("C2").Value = "Reading Markup subjects to ID:" & Trim(i) & "/" & Trim(UBound(aID)) & "..."
         Set oExec = oShell.Exec(sEnginePath + sCMD)
         Sleep (0.5)
         sResult = sResult + oExec.StdOut.ReadAll
@@ -116,8 +121,8 @@ Sub Btn1_Click()
     
     iTmp = 0
     iID = 0
-    For I = 0 To UBound(aR)
-        Select Case aR(I)
+    For i = 0 To UBound(aR)
+        Select Case aR(i)
             Case "0"
                 'without subject
                 iID = iID + 1
@@ -131,12 +136,17 @@ Sub Btn1_Click()
                 iTmp = iTmp + 1
                 ReDim Preserve aSubject(iTmp)
                 ReDim Preserve aSubjectID(iTmp)
-                iStart = InStr(aR(I), "'subject':")
-                iEnd = InStr(aR(I), "'}")
-                aSubject(iTmp) = Mid(aR(I), iStart + 11, iEnd - iStart - 11)
+                iStart = InStr(aR(i), "'subject':")
+                iEnd = InStr(aR(i), "'}")
+                aSubject(iTmp) = Mid(aR(i), iStart + 11, iEnd - iStart - 11)
                 aSubjectID(iTmp) = aID(iID)
         End Select
-    Next I
+    Next i
+    
+    If IsEmpty(aSubject) Then
+        MsgBox "Can't find any Markup Subject in this file.", vbOKOnly, APPNAME
+        Exit Sub
+    End If
     sMsg = sMsg + " Markup*" + Trim(UBound(aSubject)) + ";"
     Range("C2").Value = sMsg
     
@@ -145,28 +155,28 @@ Sub Btn1_Click()
     iCount = 0
     sCMD = ""
     Range("C2").Value = "Changing Markup subjects..."
-    For I = 1 To UBound(aSubject)
+    For i = 1 To UBound(aSubject)
         If iTmp = 0 Then
             iTmp = iTmp + 1
             ReDim Preserve aSubjectSort(iTmp)
-            aSubjectSort(iTmp) = aSubject(I)
+            aSubjectSort(iTmp) = aSubject(i)
         Else
             On Error Resume Next
-            iStart = WorksheetFunction.Match(aSubject(I), aSubjectSort, 0)
+            iStart = WorksheetFunction.Match(aSubject(i), aSubjectSort, 0)
             If Err <> 0 Then iStart = -1
             If iStart <= 0 Then
                 iTmp = iTmp + 1
                 ReDim Preserve aSubjectSort(iTmp)
-                aSubjectSort(iTmp) = aSubject(I)
+                aSubjectSort(iTmp) = aSubject(i)
             End If
         End If
         
         On Error Resume Next
         sTmp = ""
-        sTmp = WorksheetFunction.VLookup(aSubject(I), Range("A4:B100"), 2, 0)
+        sTmp = WorksheetFunction.VLookup(aSubject(i), Range("A4:B100"), 2, 0)
         If sTmp <> "" Then
             iEnd = iEnd + 1
-            sCMD = sCMD + "MarkupSet(1,'" + aSubjectID(I) + "',\""{'subject':'" + sTmp + "'}\"") "
+            sCMD = sCMD + "MarkupSet(1,'" + aSubjectID(i) + "',\""{'subject':'" + sTmp + "'}\"") "
             
             iCount = iCount + 1
             If iCount = CountMax Then 'seperate the CMD in case of too long
@@ -175,7 +185,7 @@ Sub Btn1_Click()
                 Else
                     sCMD = " Open('" + sPDF + "') " + sCMD + "Save('" + sNewFile + "',1) Close()"
                 End If
-                Range("C2").Value = "Changing Markup subjects to ID:" & Trim(I) & "..."
+                Range("C2").Value = "Changing Markup subjects to ID:" & Trim(i) & "/" & Trim(UBound(aSubject)) & "..."
                 Set oExec = oShell.Exec(sEnginePath + sCMD)
                 Sleep (0.5)
                 sResult = oExec.StdOut.ReadAll
@@ -183,19 +193,25 @@ Sub Btn1_Click()
                 sCMD = ""
             End If
         End If
-    Next I
+    Next i
     sMsg = sMsg + " Paired*" + Trim(iEnd) + ";"
     Range("C2").Value = sMsg
     
-    For I = 1 To UBound(aSubjectSort)
-        Range("D" + Trim(3 + I)).Value = aSubjectSort(I)
+    For i = 1 To UBound(aSubjectSort)
+        Range("D" + Trim(3 + i)).Value = aSubjectSort(i)
         sTmp = ""
-        sTmp = WorksheetFunction.VLookup(aSubjectSort(I), Range("A4:B100"), 2, 0)
+        sTmp = WorksheetFunction.VLookup(aSubjectSort(i), Range("A4:B100"), 2, 0)
         If sTmp = "" Then
-            Range("D" + Trim(3 + I)).Select
-            Selection.Interior.ThemeColor = xlThemeColorDark2
+            sTmp = WorksheetFunction.VLookup(aSubjectSort(i), Range("B4:B100"), 1, 0)
+            Range("D" + Trim(3 + i)).Select
+            If sTmp = "" Then
+                Selection.Interior.ThemeColor = xlThemeColorDark2
+            Else
+                Selection.Interior.ThemeColor = xlThemeColorAccent6
+                Selection.Interior.TintAndShade = 0.799981688894314
+            End If
         End If
-    Next I
+    Next i
     
     If iEnd > iCount Then
         sCMD = " Open('" + sNewFile + "') " + sCMD + "Save('" + sNewFile + "',1) Close()"
@@ -207,9 +223,9 @@ Sub Btn1_Click()
         Set oExec = oShell.Exec(sEnginePath + sCMD)
         Sleep (0.5)
         sResult = oExec.StdOut.ReadAll
-        MsgBox "PDF saved as: " + vbCrLf + sNewFile, vbOKCancel, APPNAME
+        MsgBox "PDF saved as: " + vbCrLf + sNewFile, vbOKOnly, APPNAME
     Else
-        MsgBox "No paired markup, Please add the pair list in Col A&B.", vbOKCancel, APPNAME
+        MsgBox "No paired markup, Please add the pair list in Col A&B.", vbOKOnly, APPNAME
     End If
     
     
@@ -225,3 +241,13 @@ Sub Sleep(T As Single)  ' T:Seconds
         DoEvents
     Loop While Timer - time1 < T
 End Sub
+
+Function IsEmpty(ByVal sArray As Variant) As Boolean
+    Dim i As Long
+    IsEmpty = False
+    On Error GoTo lerr:
+    i = UBound(sArray)
+    Exit Function
+lerr:
+        IsEmpty = True
+End Function
